@@ -1,0 +1,52 @@
+name: Deploy to Cloud Run
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT }}
+  REGION: us-central1
+  REPOSITORY: fastapi-demo-repo
+  SERVICE: fastapi-cicd-demo
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+
+      - name: Setup Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker
+        run: |
+          gcloud auth configure-docker us-central1-docker.pkg.dev
+
+      - name: Build Image
+        run: |
+          docker build -t us-central1-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/fastapi-cicd-demo:latest .
+
+      - name: Push Image
+        run: |
+          docker push us-central1-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/fastapi-cicd-demo:latest
+
+      - name: Deploy Cloud Run
+        run: |
+          gcloud run deploy $SERVICE \
+            --image us-central1-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/fastapi-cicd-demo:latest \
+            --region $REGION \
+            --platform managed \
+            --allow-unauthenticated
