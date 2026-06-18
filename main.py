@@ -6,5 +6,5 @@ app = FastAPI()
 @app.get("/")
 def home():
     return {
-        "message": "Hello CI/CD"
+        "message": "Welcome to the FastAPI application!"
     }
